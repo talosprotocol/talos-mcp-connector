@@ -46,13 +46,6 @@ class TalosConnector:
         # Ensure dir exists
         os.makedirs(data_dir, exist_ok=True)
 
-        # Check if Talos Core is available
-        try:
-            import src.client.cli
-        except ImportError:
-            logger.warning("⚠️  Talos Core not found. Skipping Identity Init (SIMULATION MODE).")
-            return data_dir, registry
-
         # Init
         subprocess.run([
             sys.executable, "-m", "src.client.cli",
@@ -100,33 +93,17 @@ class TalosConnector:
             
             # Spawn the bridge
             # python3 -m src.client.cli mcp-serve ...
-            # Check if Talos Core is available
-            cmd = [sys.executable, "-m", "src.client.cli"]
-            
-            # Simulation Mode for Independent Repo Verification
-            # (Since 'src' is in Core monorepo, and PyPI package not yet published)
-            use_sim = False
-            try:
-                import src.client.cli
-            except ImportError:
-                logger.warning("⚠️  Talos Core (src.client.cli) not found. Using SIMULATION MODE.")
-                use_sim = True
-
-            if use_sim:
-                # Spawn a dummy process that sleeps to simulate an active bridge
-                proc = subprocess.Popen([
-                    "sleep", "3600"
-                ])
-            else:
-                proc = subprocess.Popen([
-                    sys.executable, "-m", "src.client.cli",
-                    "--data-dir", data_dir,
-                    "mcp-serve",
-                    "--authorized-peer", peer_id,
-                    "--command", cmd,
-                    "--server", registry,
-                    "--port", "0" 
-                ])
+            # Spawn the bridge
+            # python3 -m src.client.cli mcp-serve ...
+            proc = subprocess.Popen([
+                sys.executable, "-m", "src.client.cli",
+                "--data-dir", data_dir,
+                "mcp-serve",
+                "--authorized-peer", peer_id,
+                "--command", cmd,
+                "--server", registry,
+                "--port", "0" # Random port
+            ])
             self.processes.append(proc)
 
         logger.info("✅ All bridges running. Press Ctrl+C to stop.")
