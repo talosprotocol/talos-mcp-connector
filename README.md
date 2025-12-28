@@ -1,55 +1,43 @@
-# Talos MCP Connector
+# Generic MCP Connector
 
-The **Talos MCP Connector** is a product that allows you to securely expose *any* Standard MCP Server over the Talos P2P Network.
+> **Secure Bridge for MCP Servers**
 
-This enables you to use local tools (Git, Databases, LLMs) from remote AI Agents (like Claude Desktop) with full cryptographic security and auditability.
+This product allows Talos Agents to connect to standard Model Context Protocol (MCP) servers (like Git, SQLite, Ollama) while enforcing strict capability-based access control.
 
-## 🚀 Quick Start
+## Architecture
 
-### 1. Configuration
-Edit `mcp_config.yaml` to define your identity and the tools you want to share.
-
-```yaml
-resources:
-  - name: "git-repo"
-    command: "uvx mcp-server-git"
-    allowed_peers: ["<YOUR_AGENT_PEER_ID>"]
+```mermaid
+graph LR
+    Agent[Talos Agent] -->|Encrypted P2P| Connector[MCP Connector]
+    Connector -->|Stdio| Server[Upstream MCP Server]
+    Connector -->|Policy| Config[mcp_config.yaml]
 ```
 
-### 2. Run the Connector
+## Features
+
+- **Universal Bridge**: Works with any Stdio-based MCP server.
+- **Policy Enforcement**: `require_capability: true` blocks unauthorized tool use.
+- **Zero-Code**: Configuration via YAML.
+
+## Development
+
+1. **Install Dependencies**:
 ```bash
-python3 connector.py mcp_config.yaml
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-The connector will:
-1.  Initialize a Talos Identity (`GenericHost`).
-2.  Register with the network.
-3.  Launch a secure bridge for each defined resource.
+2. **Run Tests**:
+```bash
+# Install Hooks
+./scripts/install_hooks.sh
 
-### 3. Connect from Agent
-On your client machine (Agent), use `talos mcp-connect`:
-
-```json
-// claude_desktop_config.json
-{
-  "mcpServers": {
-    "remote-git": {
-      "command": "talos",
-      "args": ["mcp-connect", "<HOST_PEER_ID>"]
-    }
-  }
-}
+# Run Manually
+pytest
 ```
 
-## 📦 Supported Resource Types
-Any MCP Server that runs over Stdio is supported.
-*   **Git**: `uvx mcp-server-git`
-*   **SQLite**: `uvx mcp-server-sqlite`
-*   **Postgres**: `uvx mcp-server-postgres`
-*   **Ollama**: (See `examples/mcp_server_ollama.py`)
-*   **Google Drive**: `uvx mcp-server-gdrive`
-
-## 🔒 Security
-*   **Zero-Trust**: Only peers listed in `allowed_peers` can access the tool.
-*   **Encryption**: All traffic is E2EE using X25519/ChaCha20.
-*   **Audit**: Every interaction is logged to the local chain.
+3. **Run Connector**:
+```bash
+python connector.py
+```

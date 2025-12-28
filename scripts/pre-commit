@@ -1,0 +1,8 @@
+#!/bin/sh
+echo "🔍 Running pre-commit validation..."
+if command -v pytest >/dev/null 2>&1; then
+    pytest
+else
+    echo "⚠️ pytest not found. Install requirements-dev.txt."
+    exit 1
+fi
