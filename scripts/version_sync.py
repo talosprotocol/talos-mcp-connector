@@ -25,8 +25,7 @@ def main() -> None:
 
     old = m.group(1)
     new = bump_patch(old)
-    out = text[: m.start(1)] + new + text[m.end(1) :]
-    pyproject.write_text(out, encoding="utf-8")
+    pyproject.write_text(text[: m.start(1)] + new + text[m.end(1) :], encoding="utf-8")
     print(f"version-sync: {old} -> {new}")
 
 

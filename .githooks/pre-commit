@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-pre-commit run --all-files
-git add pyproject.toml || true
+python scripts/version_sync.py
+git add pyproject.toml
+
+ruff check --fix .
+ruff format .
+pytest
