@@ -1,23 +1,26 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.15
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
-
   - repo: local
     hooks:
+      - id: version-sync
+        name: version-sync
+        entry: python scripts/version_sync.py
+        language: system
+        pass_filenames: false
+
+      - id: ruff-check
+        name: ruff-check
+        entry: ruff check --fix
+        language: system
+        types: [python]
+
+      - id: ruff-format
+        name: ruff-format
+        entry: ruff format
+        language: system
+        types: [python]
+
       - id: pytest
         name: pytest
         entry: pytest
         language: system
         pass_filenames: false
-        always_run: true
-
-      - id: version-sync
-        name: version sync
-        entry: python scripts/version_sync.py
-        language: system
-        pass_filenames: false
-        always_run: true
