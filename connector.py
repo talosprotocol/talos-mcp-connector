@@ -9,7 +9,6 @@ import sys
 import yaml
 import time
 import subprocess
-import signal
 import logging
 from typing import Dict, Any
 
@@ -18,6 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("TalosConnector")
 
 DEFAULT_CONFIG = "mcp_config.yaml"
+
 
 class TalosConnector:
     def __init__(self, config_path: str):
@@ -30,7 +30,7 @@ class TalosConnector:
         if not os.path.exists(self.config_path):
             logger.error(f"Config file not found: {self.config_path}")
             sys.exit(1)
-        
+
         with open(self.config_path, "r") as f:
             return yaml.safe_load(f)
 
@@ -42,24 +42,44 @@ class TalosConnector:
         registry = identity.get("registry", "localhost:8765")
 
         logger.info(f"🔑 Initializing Identity '{name}' in {data_dir}...")
-        
+
         # Ensure dir exists
         os.makedirs(data_dir, exist_ok=True)
 
         # Init
-        subprocess.run([
-            sys.executable, "-m", "src.client.cli",
-            "--data-dir", data_dir,
-            "init", "--name", name
-        ], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.client.cli",
+                "--data-dir",
+                data_dir,
+                "init",
+                "--name",
+                name,
+            ],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
         # Register
         logger.info(f"🌐 Registering with {registry}...")
-        subprocess.run([
-            sys.executable, "-m", "src.client.cli",
-            "--data-dir", data_dir,
-            "register", "--server", registry
-        ], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.client.cli",
+                "--data-dir",
+                data_dir,
+                "register",
+                "--server",
+                registry,
+            ],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
         return data_dir, registry
 
@@ -83,31 +103,40 @@ class TalosConnector:
                 continue
 
             # For now, we spawn one bridge per peer per resource (or utilize multi-peer support if available)
-            # The current mcp-serve command takes one --authorized-peer arg or handles generic? 
-            # Looking at source, it accepts a single peer. 
+            # The current mcp-serve command takes one --authorized-peer arg or handles generic?
+            # Looking at source, it accepts a single peer.
             # We will grab the first peer for MVP or spawn multiples.
             # Let's assume MVP: First peer only.
             peer_id = peers[0]
 
             logger.info(f"   Drafting Bridge: {name} -> {peer_id}")
-            
+
             # Spawn the bridge
             # python3 -m src.client.cli mcp-serve ...
             # Spawn the bridge
             # python3 -m src.client.cli mcp-serve ...
-            proc = subprocess.Popen([
-                sys.executable, "-m", "src.client.cli",
-                "--data-dir", data_dir,
-                "mcp-serve",
-                "--authorized-peer", peer_id,
-                "--command", cmd,
-                "--server", registry,
-                "--port", "0" # Random port
-            ])
+            proc = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "src.client.cli",
+                    "--data-dir",
+                    data_dir,
+                    "mcp-serve",
+                    "--authorized-peer",
+                    peer_id,
+                    "--command",
+                    cmd,
+                    "--server",
+                    registry,
+                    "--port",
+                    "0",  # Random port
+                ]
+            )
             self.processes.append(proc)
 
         logger.info("✅ All bridges running. Press Ctrl+C to stop.")
-        
+
         # Wait loop
         try:
             while self.running:
@@ -127,6 +156,7 @@ class TalosConnector:
         for p in self.processes:
             p.terminate()
         sys.exit(0)
+
 
 if __name__ == "__main__":
     cfg = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONFIG
