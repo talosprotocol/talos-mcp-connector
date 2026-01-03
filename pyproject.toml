@@ -1,6 +1,6 @@
 [project]
 name = "talos-mcp-connector"
-version = "0.1.19"
+version = "0.1.20"
 description = "MCP Connector for Talos Protocol"
 requires-python = ">=3.10"
 dependencies = [
