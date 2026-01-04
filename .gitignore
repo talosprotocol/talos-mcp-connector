@@ -45,3 +45,5 @@ Thumbs.db
 .pytest_cache/
 htmlcov/
 
+conformance.xml
+junit.xml
