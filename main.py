@@ -209,3 +209,73 @@ def list_tools():
             },
         ]
     }
+
+
+@app.get("/api/mcp/resources")
+def list_resources():
+    """List configured MCP resources from mcp_config.yaml with health status.
+    
+    This endpoint is the source of truth for downstream MCP services.
+    The dashboard uses this to display connection status.
+    """
+    import yaml
+    from pathlib import Path
+    import requests
+    
+    config_path = Path(__file__).parent / "mcp_config.yaml"
+    
+    result = {
+        "resources": [],
+        "config_loaded": False,
+        "timestamp": time.time(),
+    }
+    
+    # Load config
+    try:
+        if config_path.exists():
+            with open(config_path) as f:
+                config = yaml.safe_load(f)
+            result["config_loaded"] = True
+            
+            # Extract resources
+            raw_resources = config.get("resources", [])
+            
+            for res in raw_resources:
+                resource_info = {
+                    "name": res.get("name", "unknown"),
+                    "type": res.get("type", "unknown"),
+                    "status": "unknown",
+                    "description": res.get("command", ""),
+                }
+                
+                # For stdio resources, we can't easily check health
+                # They are process-based, not HTTP services
+                if res.get("type") == "stdio":
+                    resource_info["status"] = "configured"
+                    resource_info["note"] = "stdio resource - starts on demand"
+                
+                result["resources"].append(resource_info)
+                
+            # Also add info about core Talos services the connector depends on
+            core_services = [
+                {"name": "ollama", "url": "http://localhost:11434/api/tags", "description": "Local LLM inference"},
+            ]
+            
+            for svc in core_services:
+                try:
+                    resp = requests.get(svc["url"], timeout=2)
+                    status = "online" if resp.ok else "offline"
+                except Exception:
+                    status = "offline"
+                    
+                result["resources"].append({
+                    "name": svc["name"],
+                    "type": "http",
+                    "status": status,
+                    "description": svc["description"],
+                })
+                
+    except Exception as e:
+        result["error"] = str(e)
+    
+    return result
