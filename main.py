@@ -217,8 +217,16 @@ def list_resources():
     
     This endpoint is the source of truth for downstream MCP services.
     The dashboard uses this to display connection status.
+    
+    Contract:
+    - resources: sorted by name ascending (ASCII)
+    - config_hash: sha256 of canonical JSON (sorted keys) of config
+    - No file paths, secrets, or raw YAML in response
+    - Returns 200 even on config errors (config_loaded: false)
     """
     import yaml
+    import json
+    import hashlib
     from pathlib import Path
     import requests
     
@@ -227,55 +235,88 @@ def list_resources():
     result = {
         "resources": [],
         "config_loaded": False,
-        "timestamp": time.time(),
+        "config_hash": None,
+        "timestamp": int(time.time() * 1000),  # epoch ms
     }
     
-    # Load config
     try:
-        if config_path.exists():
-            with open(config_path) as f:
-                config = yaml.safe_load(f)
-            result["config_loaded"] = True
+        if not config_path.exists():
+            result["code"] = "TALOS_CONFIG_NOT_FOUND"
+            return result
             
-            # Extract resources
-            raw_resources = config.get("resources", [])
+        with open(config_path) as f:
+            raw_content = f.read()
             
-            for res in raw_resources:
-                resource_info = {
-                    "name": res.get("name", "unknown"),
-                    "type": res.get("type", "unknown"),
-                    "status": "unknown",
-                    "description": res.get("command", ""),
-                }
-                
-                # For stdio resources, we can't easily check health
-                # They are process-based, not HTTP services
-                if res.get("type") == "stdio":
-                    resource_info["status"] = "configured"
-                    resource_info["note"] = "stdio resource - starts on demand"
-                
-                result["resources"].append(resource_info)
-                
-            # Also add info about core Talos services the connector depends on
-            core_services = [
-                {"name": "ollama", "url": "http://localhost:11434/api/tags", "description": "Local LLM inference"},
-            ]
+        try:
+            config = yaml.safe_load(raw_content)
+        except yaml.YAMLError:
+            result["code"] = "TALOS_INVALID_CONFIG"
+            result["details"] = {"message": "YAML parse error"}
+            return result
             
-            for svc in core_services:
-                try:
-                    resp = requests.get(svc["url"], timeout=2)
-                    status = "online" if resp.ok else "offline"
-                except Exception:
-                    status = "offline"
-                    
-                result["resources"].append({
-                    "name": svc["name"],
-                    "type": "http",
-                    "status": status,
-                    "description": svc["description"],
-                })
+        if not isinstance(config, dict):
+            result["code"] = "TALOS_INVALID_CONFIG"
+            result["details"] = {"message": "Config must be an object"}
+            return result
+            
+        result["config_loaded"] = True
+        
+        # Compute config_hash from canonical JSON (sorted keys)
+        canonical_json = json.dumps(config, sort_keys=True, separators=(",", ":"))
+        result["config_hash"] = hashlib.sha256(canonical_json.encode()).hexdigest()[:16]
+        
+        # Extract resources - redact sensitive fields
+        raw_resources = config.get("resources", [])
+        resources = []
+        
+        for res in raw_resources:
+            if not isinstance(res, dict):
+                continue
+            # Only include safe fields - no paths, secrets, or allowed_peers
+            resource_info = {
+                "name": str(res.get("name", "unknown")),
+                "type": str(res.get("type", "unknown")),
+                "status": "unknown",
+            }
+            
+            # Add description from command but redact actual command content
+            if "command" in res:
+                # Just show the tool name, not the full command
+                cmd = str(res.get("command", ""))
+                resource_info["description"] = cmd.split()[0] if cmd else "configured"
+            
+            # For stdio resources, they start on demand
+            if res.get("type") == "stdio":
+                resource_info["status"] = "configured"
+            
+            resources.append(resource_info)
+        
+        # Add core HTTP services with health checks
+        core_services = [
+            {"name": "ollama", "url": os.getenv("OLLAMA_URL", "http://localhost:11434") + "/api/tags", "description": "LLM inference"},
+        ]
+        
+        for svc in core_services:
+            try:
+                resp = requests.get(svc["url"], timeout=2)
+                status = "online" if resp.ok else "offline"
+            except Exception:
+                status = "offline"
                 
-    except Exception as e:
-        result["error"] = str(e)
+            resources.append({
+                "name": svc["name"],
+                "type": "http",
+                "status": status,
+                "description": svc["description"],
+            })
+        
+        # Deterministic ordering: sort by name ascending (ASCII)
+        resources.sort(key=lambda r: r["name"])
+        result["resources"] = resources
+        
+    except Exception:
+        # Never expose internal errors
+        result["code"] = "TALOS_INTERNAL_ERROR"
+        result["config_loaded"] = False
     
     return result
