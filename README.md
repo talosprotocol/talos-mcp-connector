@@ -57,3 +57,7 @@ Evaluation: N/A for this repo.
 1.  [Model Context Protocol](https://github.com/modelcontextprotocol)
 2.  [Talos Wiki](https://github.com/talosprotocol/talos/wiki)
 3.  [MCP Integration](https://github.com/talosprotocol/talos/wiki/MCP-Integration)
+
+## License
+
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
