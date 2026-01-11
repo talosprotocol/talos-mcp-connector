@@ -42,7 +42,8 @@ class SchemaCache:
         
         # Calculate hash if not provided
         if not schema_hash:
-            s_json = json.dumps(schema, sort_keys=True)
+            from talos_sdk.canonical import canonical_json
+            s_json = canonical_json(schema)
             schema_hash = hashlib.sha256(s_json.encode()).hexdigest()
         
         data = {
