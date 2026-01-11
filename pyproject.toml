@@ -1,23 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "talos-mcp-connector"
-version = "0.1.23"
-description = "MCP Connector for Talos Protocol"
+version = "0.1.0"
+description = "Talos MCP Connector CLI"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp",
-    "requests",
-    "uvicorn",
-    "fastapi",
-    "talos-sdk-py @ git+https://github.com/talosprotocol/talos-sdk-py.git"
+    "click>=8.1.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "requests>=2.31.0",
+    "jsonschema>=4.0.0",
+    "rich>=13.0.0" 
 ]
 
-[tool.setuptools]
-py-modules = ["main", "bootstrap"]
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff"
+]
+
+[project.scripts]
+talos = "talos_mcp.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+src = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
+pythonpath = ["src"]

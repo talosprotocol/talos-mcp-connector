@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "git": {
+      "transport": "talos_tunnel",
+      "endpoint": "http://localhost:8080/v1/mcp",
+      "metadata": {
+        "remote_id": "git"
+      }
+    }
+  }
+}
