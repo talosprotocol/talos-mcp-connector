@@ -9,9 +9,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir .
+# Install python dependencies from root context
+COPY services/mcp-connector/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Contracts (dependency)
+COPY contracts/python /contracts/python
+RUN pip install --no-cache-dir /contracts/python
 
 # ==========================================
 # Production Stage
@@ -41,7 +45,11 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY . .
+COPY services/mcp-connector/ .
+
+# Legacy Layout Support: Copy schemas to where main.py expects them
+# Code looks for ../talos-contracts/schemas relative to legacy/main.py
+COPY contracts/schemas /app/talos-contracts/schemas
 
 # Set permissions
 RUN chown -R talos:talos /app
@@ -57,5 +65,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 8082
 
 # Start command
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8082", "--proxy-headers"]
+# Start command (legacy path)
+CMD ["uvicorn", "legacy.main:app", "--host", "0.0.0.0", "--port", "8082", "--proxy-headers"]
 
