@@ -69,7 +69,7 @@ def invoke_mcp(request: MCPRequest):
             from pathlib import Path
 
             # Load Schema (Contract-First)
-            # Assuming repo structure: deploy/repos/talos-mcp-connector/main.py -> ../talos-contracts/schemas/mcp/chat_tool.schema.json
+            # Assuming repo structure: services/mcp-connector/main.py -> ../../contracts/schemas/mcp/chat_tool.schema.json
             # Relative path: ../talos-contracts/schemas/mcp/chat_tool.schema.json
             schema_path = (
                 Path(__file__).parent.parent / "talos-contracts/schemas/mcp/chat_tool.schema.json"
