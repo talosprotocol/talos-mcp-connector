@@ -21,7 +21,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "ruff"
+    "ruff",
+    "types-PyYAML",
+    "types-jsonschema"
 ]
 
 [project.scripts]
