@@ -12,8 +12,12 @@ class TalosTunnelTransport(McpTransport):
         pass
 
     def _get_headers(self) -> Dict[str, str]:
-        # TODO: Integrate with Talos Identity/Auth sdk
-        token = os.getenv("TALOS_API_TOKEN", "mock-token")
+        # Use Shared Secret or configured Token
+        token = os.getenv("TALOS_API_TOKEN") or os.getenv("AUTH_SECRET")
+        if not token:
+             # Fallback for local dev only
+             token = "dev-placeholder"
+             
         return {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
