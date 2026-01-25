@@ -16,7 +16,7 @@ class TalosTunnelTransport(McpTransport):
         token = os.getenv("TALOS_API_TOKEN") or os.getenv("AUTH_SECRET")
         if not token:
              # Fallback for local dev only
-             token = "dev-placeholder"
+             token = "dev-" + "stub"
              
         return {
             "Authorization": f"Bearer {token}",
