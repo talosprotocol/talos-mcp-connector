@@ -11,12 +11,14 @@ RUN apt-get update && \
 
 COPY sdks/python /build/sdks/python
 COPY contracts/python /build/contracts/python
+COPY libs/talos-config /build/libs/talos-config
 COPY services/mcp-connector/requirements.txt .
 
 RUN pip wheel --no-cache-dir --wheel-dir /wheels \
     -r requirements.txt \
     /build/sdks/python \
-    /build/contracts/python
+    /build/contracts/python \
+    /build/libs/talos-config
 
 # ========================================
 # Runtime Stage

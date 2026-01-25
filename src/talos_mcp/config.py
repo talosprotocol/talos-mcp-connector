@@ -18,26 +18,39 @@ class TalosMcpConfig(BaseModel):
     mcpServers: Dict[str, McpResourceConfig]
 
     @classmethod
-    def load(cls, path: str) -> "TalosMcpConfig":
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"Config file not found: {path}")
+    def load(cls, path: Optional[str] = None) -> "TalosMcpConfig":
+        from talos_config import ConfigurationLoader
+        import os
+        import re
 
-        with open(path, "r") as f:
-            raw_content = f.read()
+        loader = ConfigurationLoader("talos-mcp")
+        # Load using standard precedence, with optional file override
+        data = loader.load(config_file=path, env_prefix="TALOS_MCP__")
 
-        # Env var substitution
-        def env_sub(match):
-            var_name = match.group(1)
-            val = os.getenv(var_name)
-            if val is None:
-                raise ValueError(f"Environment variable '{var_name}' is not set")
-            return val
+        # Legacy Support: Recursive Regex Substitution for ${VAR}
+        def substitute_env_vars(obj):
+            if isinstance(obj, dict):
+                return {k: substitute_env_vars(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [substitute_env_vars(i) for i in obj]
+            elif isinstance(obj, str):
+                def sub(match):
+                    var_name = match.group(1)
+                    val = os.getenv(var_name)
+                    if val is None:
+                        # Keep original if not set, or raise? Original raised ValueError.
+                        # For shim, better to warn and keep or raise. Original raised.
+                        raise ValueError(f"Environment variable '{var_name}' is not set")
+                    return val
+                return re.sub(r'\$\{([A-Z0-9_]+)\}', sub, obj)
+            return obj
 
-        # Regex for ${VAR}
-        content_sub = re.sub(r'\$\{([A-Z0-9_]+)\}', env_sub, raw_content)
-
-        data = yaml.safe_load(content_sub)
+        data = substitute_env_vars(data)
         
+        # Ensure mcpServers exists
+        if "mcpServers" not in data:
+            data["mcpServers"] = {}
+
         servers = {}
         for s_id, s_config in data.get("mcpServers", {}).items():
             # Auto-fill id and name if missing
@@ -55,4 +68,8 @@ class TalosMcpConfig(BaseModel):
             
             servers[s_id] = McpResourceConfig(**s_config)
 
-        return cls(mcpServers=servers)
+        # Inject version info for logging context if needed, though mostly used by CLI
+        config = cls(mcpServers=servers)
+        # Store loader instance/digest if we want to expose it
+        config._loader = loader
+        return config

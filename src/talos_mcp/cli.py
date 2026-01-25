@@ -45,7 +45,15 @@ def cli():
 def mcp(ctx, config):
     """MCP Connector commands"""
     ctx.ensure_object(dict)
-    ctx.obj['config'] = get_config(config)
+    cfg = get_config(config)
+    ctx.obj['config'] = cfg
+    
+    # Access loader if attached per refactor
+    loader = getattr(cfg, "_loader", None)
+    digest = loader.validate()[:8] if loader else "unknown"
+    contracts_ver = "1.2.0" # Pinned
+    
+    console.print(f"[dim]Startup Config | Contracts: {contracts_ver} | Digest: {digest}[/dim]")
     ctx.obj['cache'] = SchemaCache()
 
 @mcp.command()
