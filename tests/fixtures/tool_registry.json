@@ -1,0 +1,21 @@
+{
+  "schema_id": "talos.mcp.tool_registry",
+  "schema_version": "v1",
+  "server_id": "test-server",
+  "server_version": "1.0.0",
+  "tools": [
+    {
+      "tool_name": "unknown-tool",
+      "tool_class": "read" 
+    },
+    {
+      "tool_name": "list-issues",
+      "tool_class": "read"
+    },
+    {
+      "tool_name": "write-tool",
+      "tool_class": "write",
+      "requires_idempotency_key": true
+    }
+  ]
+}

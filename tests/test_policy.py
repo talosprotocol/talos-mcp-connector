@@ -1,6 +1,6 @@
 """Tests for tool policy engine (Phase 9.2.1)."""
 import pytest
-from talos_mcp.policy import (
+from talos_mcp.domain.tool_policy import (
     ToolPolicyEngine,
     DocumentValidator,
     ToolPolicyError,

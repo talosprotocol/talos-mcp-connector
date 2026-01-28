@@ -1,0 +1,6 @@
+resources:
+  - id: test-server
+    name: Test Server
+    type: stdio
+    command: echo
+    args: ["hello"]

@@ -11,14 +11,12 @@ import json
 import logging
 import base64
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 from dataclasses import dataclass
 from pathlib import Path
 
-try:
-    import jsonpointer
-except ImportError:
-    jsonpointer = None  # Graceful degradation for tests
+from pathlib import Path
+import jsonpointer
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +51,7 @@ class ToolPolicy:
     tool_class: ToolClass
     is_document_op: bool
     requires_idempotency_key: bool
+    read_replay_safe: bool
     document_spec: Optional[DocumentSpec]
 
 
@@ -85,43 +84,100 @@ class ToolPolicyEngine:
         self.env = env
         self.registry: Dict[tuple, ToolPolicy] = {}
         
-        if registry_path and Path(registry_path).exists():
+        if registry_path:
             self._load_registry(registry_path)
         else:
-            logger.warning("No tool registry loaded - running in permissive mode")
+            # Default to checking the package
+            self._load_registry("talos_contracts")
     
-    def _load_registry(self, path: str) -> None:
+    def _load_registry(self, path_or_package: str) -> None:
         """Load tool registry from versioned contracts artifact."""
-        with open(path, 'r') as f:
-            data = json.load(f)
+        try:
+            # Try loading as a package resource (Production/CI)
+            # path_or_package is expected to be "talos_contracts"
+            import importlib.resources
+            with importlib.resources.open_text("talos_contracts.data", "tools_registry.json") as f:
+                data = json.load(f)
+                logger.info("Loaded registry from talos_contracts package")
+        except (ImportError, ModuleNotFoundError, FileNotFoundError):
+            # Fallback for local dev where package might not be built
+            path = path_or_package if path_or_package.endswith(".json") else "contracts/data/tools_registry.json"
+            if not Path(path).exists():
+                logger.warning(f"Registry not found at {path}. Running without registry.")
+                return
+
+            with open(path, 'r') as f:
+                data = json.load(f)
+                logger.info(f"Loaded registry from local path: {path}")
         
-        server_id = data.get("server_id")
-        for tool_def in data.get("tools", []):
+        # Phase 9.2: Validate metadata
+        version = data.get("registry_version")
+        if not version:
+            logger.warning("Registry missing version!")
+        
+        # Allow multiple servers in one file or single server file
+        # The schema lists "tools" under root.
+        
+        tools_list = data.get("tools", [])
+        for tool_def in tools_list:
+            if "tool_server" not in tool_def:
+                # Should be valid per schema
+                logger.warning(f"Skipping invalid tool def: {tool_def}")
+                continue
+                
+            server_id = tool_def["tool_server"]
             tool_name = tool_def["tool_name"]
             
             doc_spec = None
-            if tool_def.get("is_document_op") and tool_def.get("document_spec"):
-                spec = tool_def["document_spec"]
+            if tool_def.get("doc_policy"):
+                # Map schema 'doc_policy' to DocumentSpec
+                # Schema has: doc_policy: {max_size_bytes...}, doc_inputs: [], doc_outputs: []
+                # The ToolPolicy expects DocumentSpec structure.
+                # We need to adapt the schema format to internal structure or update internal structure.
+                # Using the schema field names:
+                d_pol = tool_def["doc_policy"]
+                d_in = tool_def.get("doc_inputs", [])
+                d_out = tool_def.get("doc_outputs", [])
+                
                 doc_spec = DocumentSpec(
-                    write_content_pointers=spec.get("write_content_pointers", []),
-                    read_content_pointers=spec.get("read_content_pointers", []),
-                    content_encoding=spec.get("content_encoding", "utf8"),
-                    max_read_bytes=spec.get("max_read_bytes", 10485760),
-                    max_write_bytes=spec.get("max_write_bytes", 5242880),
-                    max_batch_bytes=spec.get("max_batch_bytes", 52428800),
+                    write_content_pointers=d_in,
+                    read_content_pointers=d_out,
+                    content_encoding="utf8", # Default per schema implies utf8 usually, or check content-type
+                    max_read_bytes=d_pol.get("max_size_bytes", 10485760),
+                    max_write_bytes=d_pol.get("max_size_bytes", 5242880),
+                    max_batch_bytes=d_pol.get("max_size_bytes", 52428800) * 10 # heuristic
                 )
             
             policy = ToolPolicy(
                 tool_name=tool_name,
                 tool_class=ToolClass(tool_def["tool_class"]),
-                is_document_op=tool_def.get("is_document_op", False),
+                is_document_op=bool(doc_spec),
                 requires_idempotency_key=tool_def.get("requires_idempotency_key", False),
+                read_replay_safe=tool_def.get("read_replay_safe", False),
                 document_spec=doc_spec,
             )
             
             self.registry[(server_id, tool_name)] = policy
             logger.debug(f"Loaded policy for {server_id}:{tool_name}")
-    
+
+    def verify_registry_completeness(self, advertised_tools: List[Dict[str, str]]) -> List[str]:
+        """
+        CI Gate: Check if all advertised tools are in regulatory.
+        
+        Args:
+            advertised_tools: List of {"server": "...", "tool": "..."}
+            
+        Returns:
+            List of missing tools (server:tool).
+        """
+        missing = []
+        for item in advertised_tools:
+            s_id = item["server"]
+            t_name = item["tool"]
+            if (s_id, t_name) not in self.registry:
+                missing.append(f"{s_id}:{t_name}")
+        return missing
+
     def resolve_policy(self, server_id: str, tool_name: str) -> Optional[ToolPolicy]:
         """
         Resolve policy for a tool. Returns None if unclassified.
@@ -137,6 +193,7 @@ class ToolPolicyEngine:
                     f"Tool {server_id}:{tool_name} not in registry",
                     "TOOL_UNCLASSIFIED_DENIED"
                 )
+            # In dev, we might allow, but strictly log
             logger.warning(f"UNCLASSIFIED tool: {server_id}:{tool_name} (dev mode)")
         
         return policy
@@ -152,11 +209,16 @@ class ToolPolicyEngine:
         Raises:
             ToolPolicyError: If write tool called with read-only capability
         """
-        if capability_read_only and policy.tool_class == ToolClass.WRITE:
-            raise ToolPolicyError(
-                f"Write tool '{policy.tool_name}' called with read-only capability",
-                "TOOL_CLASS_MISMATCH"
-            )
+        # Decision Table Enforcement
+        if key := (capability_read_only, policy.tool_class):
+            if key == (True, ToolClass.WRITE):
+                 raise ToolPolicyError(
+                    f"Write tool '{policy.tool_name}' called with read-only capability",
+                    "TOOL_CLASS_MISMATCH"
+                )
+            # (True, READ) -> OK
+            # (False, READ) -> OK
+            # (False, WRITE) -> OK
     
     def validate_tool_class_declaration(
         self,
@@ -224,12 +286,6 @@ class DocumentValidator:
         Raises:
             ToolPolicyError: If pointer resolution fails or encoding invalid
         """
-        if jsonpointer is None:
-            raise ToolPolicyError(
-                "jsonpointer library not installed",
-                "DOC_POINTER_INVALID"
-            )
-        
         try:
             content = jsonpointer.resolve_pointer(data, pointer)
         except Exception as e:
@@ -242,6 +298,7 @@ class DocumentValidator:
             return b""
         
         if not isinstance(content, str):
+            # Enforce JCS (RFC 8785) for content canonicalization
             content = json.dumps(content, sort_keys=True, separators=(",", ":"))
         
         if encoding == "utf8":
