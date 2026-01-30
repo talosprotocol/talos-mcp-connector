@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from sqlalchemy import text
-from talos_mcp.idempotency import PostgresIdempotencyCache, IdempotencyRecord
+from talos_mcp.idempotency import PostgresIdempotencyCache, IdempotencyRecord  # type: ignore
 
 @pytest.mark.asyncio
 async def test_put_idempotency_record():

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pathlib import Path
-import jsonpointer
+import jsonpointer  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class ToolPolicyEngine:
             env: Environment - "dev" or "prod"
         """
         self.env = env
-        self.registry: Dict[tuple, ToolPolicy] = {}
+        self.registry: Dict[tuple[str, str], ToolPolicy] = {}
         
         if registry_path:
             self._load_registry(registry_path)
