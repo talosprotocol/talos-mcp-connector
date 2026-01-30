@@ -11,12 +11,13 @@ from typing import Dict, Any, Optional, List
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Body, Header, Depends
+import multipart # type: ignore
 from pydantic import BaseModel
 
-from talos_mcp.config import TalosMcpConfig
-from talos_mcp.transport import create_transport
-from talos_mcp.domain.tool_policy import ToolPolicyEngine, ToolPolicyError, DocumentValidator
-from talos_mcp.idempotency import get_idempotency_cache, IdempotentToolExecutor, IdempotencyConflictError
+from talos_mcp.config import TalosMcpConfig # type: ignore
+from talos_mcp.transport import create_transport # type: ignore
+from talos_mcp.domain.tool_policy import ToolPolicyEngine, ToolPolicyError, DocumentValidator # type: ignore
+from talos_mcp.idempotency import get_idempotency_cache, IdempotentToolExecutor, IdempotencyConflictError # type: ignore
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -111,6 +112,9 @@ async def call_tool(
     principal_id = x_talos_principal or "anonymous"
     
     # 1. Resolve Policy
+    if not state.policy_engine:
+        raise HTTPException(status_code=500, detail="Policy Engine not initialized")
+        
     try:
         policy = state.policy_engine.resolve_policy(server_id, tool_name)
     except ToolPolicyError as e:
