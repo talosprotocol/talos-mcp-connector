@@ -1,7 +1,7 @@
 # talos-mcp-connector Makefile
 # MCP Bridge Service
 
-.PHONY: install build test lint clean start stop status
+.PHONY: install build test lint clean start stop status typecheck
 
 SERVICE_NAME := talos-mcp-connector
 PID_FILE := /tmp/$(SERVICE_NAME).pid
@@ -36,3 +36,6 @@ stop:
 clean:
 	rm -rf *.egg-info build dist .venv venv .pytest_cache .ruff_cache __pycache__
 	find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+
+typecheck:
+	@echo "Typecheck not implemented for $(SERVICE_NAME)"
