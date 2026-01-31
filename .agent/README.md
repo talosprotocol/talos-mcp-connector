@@ -1,4 +1,5 @@
 # Agent workspace: services/mcp-connector
+> **Project**: services/mcp-connector
 
 This folder contains agent-facing context, tasks, workflows, and planning artifacts for this submodule.
 
