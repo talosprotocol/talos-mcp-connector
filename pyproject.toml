@@ -22,9 +22,8 @@ dependencies = [
 dev = [
     "pytest",
     "ruff",
-    "types- PyYAML",
-    "types-jsonschema",
-    "types-jsonpointer"
+    "types-PyYAML",
+    "types-jsonschema"
 ]
 
 [project.scripts]
