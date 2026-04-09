@@ -3,7 +3,7 @@ import json
 import os
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 # Set env vars before importing main
 os.environ["TALOS_MCP_CONFIG"] = "tests/fixtures/mcp_config.yaml"
@@ -57,6 +57,12 @@ def test_call_tool_write_success(mock_config, mock_policy_engine):
     state.config = mock_config
     state.policy_engine = mock_policy_engine
     
+    import asyncio
+    mock_store = MagicMock()
+    mock_store.get = AsyncMock(return_value=None)
+    mock_store.put = AsyncMock()
+    state.idempotency_store = mock_store
+    
     # Mock Policy
     policy = ToolPolicy(
         tool_name="write-tool",
@@ -66,9 +72,11 @@ def test_call_tool_write_success(mock_config, mock_policy_engine):
         document_spec=None
     )
     mock_policy_engine.resolve_policy.return_value = policy
-    
+
     # Mock Transport
-    with patch("main.create_transport") as mock_create:
+    with patch("main.create_transport") as mock_create, \
+         patch("main.get_idempotency_cache") as mock_get_cache:
+        mock_get_cache.return_value = mock_store
         mock_transport = MagicMock()
         mock_transport.call_tool.return_value = {"status": "done"}
         mock_create.return_value = mock_transport

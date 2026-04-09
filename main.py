@@ -10,8 +10,7 @@ import json
 from typing import Dict, Any, Optional, List
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Body, Header, Depends
-import multipart # type: ignore
+from fastapi import FastAPI, HTTPException, Body, Header
 from pydantic import BaseModel
 
 from talos_mcp.config import TalosMcpConfig # type: ignore

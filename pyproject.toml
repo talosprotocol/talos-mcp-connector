@@ -40,7 +40,8 @@ src = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
-pythonpath = ["src"]
+pythonpath = [".", "src"]
+addopts = "--import-mode=prepend"
 
 [tool.mypy]
 python_version = "3.10"

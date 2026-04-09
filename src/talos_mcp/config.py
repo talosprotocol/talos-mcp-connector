@@ -1,18 +1,18 @@
 import os
 import re
 import yaml
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field, ValidationError
 
 class McpResourceConfig(BaseModel):
     id: str
     name: str
-    transport: str = Field(pattern='^(stdio|http|talos_tunnel)$')
+    transport: str = Field(pattern='^(stdio|http|talos_tunnel|secure_tunnel)$')
     endpoint: Optional[str] = None
     command: Optional[str] = None
     args: Optional[List[str]] = None
     env: Optional[Dict[str, str]] = None
-    metadata: Optional[Dict[str, str]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 class TalosMcpConfig(BaseModel):
     mcpServers: Dict[str, McpResourceConfig]

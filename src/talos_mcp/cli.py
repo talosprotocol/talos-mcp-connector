@@ -48,12 +48,6 @@ def mcp(ctx, config):
     cfg = get_config(config)
     ctx.obj['config'] = cfg
     
-    # Access loader if attached per refactor
-    loader = getattr(cfg, "_loader", None)
-    digest = loader.validate()[:8] if loader else "unknown"
-    contracts_ver = "1.2.0" # Pinned
-    
-    console.print(f"[dim]Startup Config | Contracts: {contracts_ver} | Digest: {digest}[/dim]")
     ctx.obj['cache'] = SchemaCache()
 
 @mcp.command()
@@ -195,6 +189,10 @@ def call(ctx, server_id, tool_name, input_json, json_output):
     except Exception as e:
         console.print(f"[red]Error calling tool: {e}[/red]")
         sys.exit(1)
+
+
+# Backward-compatible standalone entrypoint used by tests and direct invocation.
+main = mcp
 
 if __name__ == '__main__':
     cli()

@@ -18,10 +18,10 @@ async def test_put_idempotency_record():
     
     record = IdempotencyRecord(
         server_id="s1", tool_name="t1", idempotency_key="k1",
+        principal_id="test", request_digest="test",
         tool_effect_id="eff1", tool_effect_digest="d1",
         tool_effect_payload={"result": "ok"}
-    )
-    
+    )    
     await store.put(record)
     
     # Verify INSERT execution
@@ -68,7 +68,7 @@ async def test_get_idempotency_record_hit():
     
     mock_session.execute.return_value.fetchone.return_value = mock_row
     
-    record = await store.get("s1", "t1", "k1")
+    record = await store.get("s1", "t1", "k1", "test")
     
     assert record is not None
     assert record.tool_effect_payload == {"result": "cached"}

@@ -51,8 +51,8 @@ class ToolPolicy:
     tool_class: ToolClass
     is_document_op: bool
     requires_idempotency_key: bool
-    read_replay_safe: bool
-    document_spec: Optional[DocumentSpec]
+    read_replay_safe: bool = False
+    document_spec: Optional[DocumentSpec] = None
 
 
 @dataclass
