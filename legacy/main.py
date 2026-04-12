@@ -100,7 +100,7 @@ def invoke_mcp(request: MCPRequest):
                 )
 
             # Proxy to Ollama
-            ollama_url = "http://localhost:11434/api/chat"
+            ollama_url = f"{os.getenv('OLLAMA_URL', 'http://localhost:11434')}/api/chat"
             payload = {
                 "model": args.get("model", "llama3.2:latest"),
                 "messages": args.get("messages"),
