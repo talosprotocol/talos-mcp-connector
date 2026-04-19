@@ -96,9 +96,9 @@ class ToolPolicyEngine:
             # Try loading as a package resource (Production/CI)
             # path_or_package is expected to be "talos_contracts"
             import importlib.resources
-            with importlib.resources.open_text("talos_contracts.data", "tools_registry.json") as f:
-                data = json.load(f)
-                logger.info("Loaded registry from talos_contracts package")
+            registry_ref = importlib.resources.files("talos_contracts.data").joinpath("tools_registry.json")
+            data = json.loads(registry_ref.read_text(encoding="utf-8"))
+            logger.info("Loaded registry from talos_contracts package")
         except (ImportError, ModuleNotFoundError, FileNotFoundError):
             # Fallback for local dev where package might not be built
             path = path_or_package if path_or_package.endswith(".json") else "contracts/data/tools_registry.json"
@@ -200,7 +200,7 @@ class ToolPolicyEngine:
     
     def validate_capability_match(
         self, 
-        policy: ToolPolicy, 
+        policy: Optional[ToolPolicy], 
         capability_read_only: bool
     ) -> None:
         """
@@ -209,6 +209,9 @@ class ToolPolicyEngine:
         Raises:
             ToolPolicyError: If write tool called with read-only capability
         """
+        if policy is None:
+            return
+
         # Decision Table Enforcement
         if key := (capability_read_only, policy.tool_class):
             if key == (True, ToolClass.WRITE):
@@ -222,7 +225,7 @@ class ToolPolicyEngine:
     
     def validate_tool_class_declaration(
         self,
-        policy: ToolPolicy,
+        policy: Optional[ToolPolicy],
         declared_tool_class: Optional[str]
     ) -> None:
         """
@@ -231,6 +234,9 @@ class ToolPolicyEngine:
         Raises:
             ToolPolicyError: If declaration mismatches registry
         """
+        if policy is None:
+            return
+
         if declared_tool_class and declared_tool_class != policy.tool_class.value:
             raise ToolPolicyError(
                 f"Declared tool_class '{declared_tool_class}' != registry '{policy.tool_class.value}'",
@@ -239,7 +245,7 @@ class ToolPolicyEngine:
     
     def validate_idempotency_key(
         self,
-        policy: ToolPolicy,
+        policy: Optional[ToolPolicy],
         idempotency_key: Optional[str]
     ) -> None:
         """
@@ -248,6 +254,9 @@ class ToolPolicyEngine:
         Raises:
             ToolPolicyError: If idempotency key is missing
         """
+        if policy is None:
+            return
+
         if policy.requires_idempotency_key and not idempotency_key:
             raise ToolPolicyError(
                 f"Write tool '{policy.tool_name}' requires idempotency_key",
