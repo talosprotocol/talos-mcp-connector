@@ -14,6 +14,10 @@ from talos_mcp.config import TalosMcpConfig, McpResourceConfig
 from talos_mcp.domain.tool_policy import ToolClass, ToolPolicy, DocumentSpec
 
 client = TestClient(app)
+AUTH_HEADERS = {
+    "X-Talos-Client-Id": "test-client",
+    "X-Talos-Principal": "test-principal",
+}
 
 @pytest.fixture
 def mock_config():
@@ -48,7 +52,8 @@ def test_call_tool_unclassified_denied(mock_config, mock_policy_engine):
     
     response = client.post(
         "/servers/test-server/tools/unknown-tool/call",
-        json={"args": {}}
+        json={"args": {}},
+        headers=AUTH_HEADERS,
     )
     assert response.status_code == 403
     assert "TOOL_UNCLASSIFIED_DENIED" in response.text
@@ -86,7 +91,8 @@ def test_call_tool_write_success(mock_config, mock_policy_engine):
             json={
                 "args": {"foo": "bar"},
                 "idempotency_key": "123"
-            }
+            },
+            headers=AUTH_HEADERS,
         )
         
         assert response.status_code == 200

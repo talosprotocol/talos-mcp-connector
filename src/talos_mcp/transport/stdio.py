@@ -18,8 +18,21 @@ class StdioMcpTransport(McpTransport):
         if self.process:
             return
 
+        # Local Server Sandboxing: Check for user consent
+        if not self.config.allow_local_execution and os.getenv("TALOS_ALLOW_LOCAL_TOOLS") != "true":
+            raise RuntimeError(
+                f"Local execution denied for {self.config.id}. "
+                "Explicit consent required via 'allow_local_execution: true' in config "
+                "or TALOS_ALLOW_LOCAL_TOOLS=true environment variable."
+            )
+
         cmd = [self.config.command] + (self.config.args or [])
-        env = os.environ.copy()
+        
+        # Local Server Sandboxing: Sanitize environment
+        # Only allow a minimal set of safe environment variables + explicitly configured ones
+        safe_env_keys = {"PATH", "HOME", "USER", "LANG", "LC_ALL"}
+        env = {k: v for k, v in os.environ.items() if k in safe_env_keys}
+        
         if self.config.env:
             env.update(self.config.env)
 

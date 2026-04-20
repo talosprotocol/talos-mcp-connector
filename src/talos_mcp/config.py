@@ -13,6 +13,7 @@ class McpResourceConfig(BaseModel):
     args: Optional[List[str]] = None
     env: Optional[Dict[str, str]] = None
     metadata: Optional[Dict[str, Any]] = None
+    allow_local_execution: bool = False # Require explicit consent for local stdio tools
 
 class TalosMcpConfig(BaseModel):
     mcpServers: Dict[str, McpResourceConfig]

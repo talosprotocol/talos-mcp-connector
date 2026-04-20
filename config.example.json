@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "test-server": {
+      "id": "test-server",
+      "name": "Test Stdio Server",
+      "transport": "stdio",
+      "command": "python3",
+      "args": ["-c", "import sys, json; \ndef respond(id, result): print(json.dumps({'jsonrpc': '2.0', 'id': id, 'result': result}), flush=True)\nfor line in sys.stdin:\n  req = json.loads(line)\n  if req['method'] == 'initialize': respond(req['id'], {'protocolVersion': '2024-11-05', 'capabilities': {}, 'serverInfo': {'name': 'test'}})\n  elif req['method'] == 'notifications/initialized': pass\n  elif req['method'] == 'tools/list': respond(req['id'], {'tools': [{'name': 'execute', 'inputSchema': {'type': 'object'}}]})\n  elif req['method'] == 'tools/call': respond(req['id'], {'content': [{'type': 'text', 'text': 'Success'}]})"],
+      "allow_local_execution": true
+    }
+  }
+}

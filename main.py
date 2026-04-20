@@ -10,7 +10,9 @@ import json
 from typing import Dict, Any, Optional, List
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Body, Header
+from fastapi import FastAPI, HTTPException, Body, Header, Depends
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from pydantic import BaseModel
 
 from talos_mcp.config import TalosMcpConfig # type: ignore
@@ -51,7 +53,28 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
 
+class StripAuthHeaderMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if "authorization" in request.headers:
+            headers = dict(request.scope["headers"])
+            headers = {k: v for k, v in headers.items() if k != b"authorization"}
+            request.scope["headers"] = [(k, v) for k, v in headers.items()]
+        return await call_next(request)
+
 app = FastAPI(title="Talos MCP Connector", version="0.2.0", lifespan=lifespan)
+app.add_middleware(StripAuthHeaderMiddleware)
+
+class AuthContext(BaseModel):
+    client_id: str
+    principal: str
+
+def get_auth_context(
+    x_talos_client_id: Optional[str] = Header(None, alias="X-Talos-Client-Id"),
+    x_talos_principal: Optional[str] = Header(None, alias="X-Talos-Principal")
+) -> AuthContext:
+    if not x_talos_client_id or not x_talos_principal:
+        raise HTTPException(status_code=401, detail="Missing Talos Auth Headers")
+    return AuthContext(client_id=x_talos_client_id, principal=x_talos_principal)
 
 class ToolCallRequest(BaseModel):
     args: Dict[str, Any] = {}
@@ -100,7 +123,7 @@ async def call_tool(
     server_id: str, 
     tool_name: str, 
     request: ToolCallRequest = Body(...),
-    x_talos_principal: Optional[str] = Header(None, alias="X-Talos-Principal")
+    auth: AuthContext = Depends(get_auth_context)
 ):
     """
     Execute a tool with policy enforcement and idempotency.
@@ -108,7 +131,14 @@ async def call_tool(
     if not state.config or server_id not in state.config.mcpServers:
         raise HTTPException(status_code=404, detail="Server not found")
 
-    principal_id = x_talos_principal or "anonymous"
+    principal_id = auth.principal
+    client_id = auth.client_id
+    
+    # Confused Deputy Protection: In a real scenario, we would verify that 
+    # the client_id is authorized to act on behalf of the principal_id for this tool.
+    # For now, we enforce that client_id must be present (which get_auth_context does).
+    if not client_id:
+        raise HTTPException(status_code=403, detail="Confused Deputy Protection: Client ID required")
     
     # 1. Resolve Policy
     if not state.policy_engine:
@@ -129,7 +159,7 @@ async def call_tool(
         
         # Check Document Write Constraints
         doc_hashes = []
-        if policy.tool_class.value == "write" and policy.is_document_op and policy.document_spec:
+        if policy and policy.tool_class.value == "write" and policy.is_document_op and policy.document_spec:
             doc_hashes = DocumentValidator.validate_write_content(
                 policy.document_spec,
                 request.args
@@ -182,7 +212,7 @@ async def call_tool(
 
     # 4. Enforce Post-Execution Policies (Read)
     try:
-        if policy.tool_class.value == "read" and policy.is_document_op and policy.document_spec:
+        if policy and policy.tool_class.value == "read" and policy.is_document_op and policy.document_spec:
             read_hashes = DocumentValidator.validate_read_content(
                 policy.document_spec,
                 result
@@ -197,7 +227,7 @@ async def call_tool(
 
     return ToolCallResponse(
         result=result,
-        tool_class=policy.tool_class.value,
+        tool_class=policy.tool_class.value if policy else "unclassified",
         document_hashes=doc_hashes
     )
 
