@@ -1,7 +1,6 @@
 """Unit tests for PostgresIdempotencyCache."""
 import pytest
-from unittest.mock import MagicMock, AsyncMock
-from sqlalchemy import text
+from unittest.mock import MagicMock
 from talos_mcp.idempotency import PostgresIdempotencyCache, IdempotencyRecord  # type: ignore
 
 @pytest.mark.asyncio

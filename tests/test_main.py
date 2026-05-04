@@ -1,5 +1,4 @@
 """Tests for Main API with Policy Enforcement."""
-import json
 import os
 import pytest
 from fastapi.testclient import TestClient
@@ -11,7 +10,7 @@ os.environ["TALOS_MCP_TOOL_REGISTRY_PATH"] = "tests/fixtures/tool_registry.json"
 
 from main import app, state
 from talos_mcp.config import TalosMcpConfig, McpResourceConfig
-from talos_mcp.domain.tool_policy import ToolClass, ToolPolicy, DocumentSpec
+from talos_mcp.domain.tool_policy import ToolClass, ToolPolicy
 
 client = TestClient(app)
 AUTH_HEADERS = {
@@ -62,7 +61,6 @@ def test_call_tool_write_success(mock_config, mock_policy_engine):
     state.config = mock_config
     state.policy_engine = mock_policy_engine
     
-    import asyncio
     mock_store = MagicMock()
     mock_store.get = AsyncMock(return_value=None)
     mock_store.put = AsyncMock()

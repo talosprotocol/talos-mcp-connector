@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from talos_mcp.config import McpResourceConfig
 
 class McpTransport(ABC):

@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 from typing import Optional
 
-from talos_mcp.config import TalosMcpConfig, McpResourceConfig
+from talos_mcp.config import TalosMcpConfig
 from talos_mcp.transport import create_transport
 from talos_mcp.cache import SchemaCache
 

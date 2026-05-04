@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import json
 from typing import Dict, Any, List, Optional
 from talos_mcp.transport.base import McpTransport
 from talos_mcp.config import McpResourceConfig

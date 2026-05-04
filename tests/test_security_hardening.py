@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 
-from main import app, state
+from main import app
 from talos_mcp.config import McpResourceConfig
 from talos_mcp.domain.tool_policy import ToolClass, ToolPolicy
 from talos_mcp.transport.stdio import StdioMcpTransport

@@ -2,7 +2,7 @@ import json
 import pytest
 from click.testing import CliRunner
 from unittest.mock import patch, MagicMock
-from talos_mcp.cli import main, create_transport
+from talos_mcp.cli import main
 
 @pytest.fixture
 def runner():

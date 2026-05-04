@@ -2,7 +2,6 @@ import requests
 import uuid
 from typing import Dict, Any, List, Optional
 from talos_mcp.transport.base import McpTransport
-from talos_mcp.config import McpResourceConfig
 
 class HttpMcpTransport(McpTransport):
     def connect(self):

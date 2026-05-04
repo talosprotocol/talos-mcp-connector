@@ -30,7 +30,7 @@ mcpServers:
 """)
     
     os.environ["TEST_VAR"] = "hello"
-    config = TalosMcpConfig.load(str(config_file))
+    TalosMcpConfig.load(str(config_file))
     # Note: args parsing needs to be handled if we use them, my model used List[str] for command
     # I should align the model with standard MCP config which uses "command" (exe) + "args" (list)
     # But for now checking if substitution worked implicitly by successful load is weak.

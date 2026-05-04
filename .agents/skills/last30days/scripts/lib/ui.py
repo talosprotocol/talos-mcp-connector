@@ -1,6 +1,5 @@
 """Terminal UI utilities for last30days skill."""
 
-import os
 import sys
 import time
 import threading

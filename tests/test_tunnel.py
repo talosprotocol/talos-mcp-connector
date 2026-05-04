@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 from talos_mcp.transport.secure import SecureTalosTunnelTransport
 from talos_mcp.config import McpResourceConfig

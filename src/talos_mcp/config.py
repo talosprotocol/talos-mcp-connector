@@ -1,8 +1,5 @@
-import os
-import re
-import yaml
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 class McpResourceConfig(BaseModel):
     id: str
