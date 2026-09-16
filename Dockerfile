@@ -1,7 +1,7 @@
 # ========================================
 # Builder Stage
 # ========================================
-FROM python:3.11-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /build
 
@@ -23,7 +23,7 @@ RUN pip wheel --no-cache-dir --wheel-dir /wheels \
 # ========================================
 # Runtime Stage
 # ========================================
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 ARG GIT_SHA=unknown
 ARG VERSION=unknown
